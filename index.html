@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#6c3483" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Doctor Vid AI</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <style>
+    /* ── Reset y fuentes ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    /* ── Fondo con gradiente ── */
+    body {
+      background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      padding: 18px 20px 14px;
+      text-align: center;
+      background: rgba(108, 52, 131, 0.25);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.5px; }
+    header h1 span { color: #c39bd3; }
+    header p  { font-size: 0.78rem; color: #a0a0b0; margin-top: 3px; }
+
+    /* ── Contenedor principal ── */
+    main {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px 16px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* ── Área de imagen ── */
+    #zona-imagen {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 20px;
+      border: 2px dashed rgba(195, 155, 211, 0.4);
+      overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+    #zona-imagen:hover { border-color: #c39bd3; }
+    #zona-imagen img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    #placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px;
+      color: #7f8c8d;
+    }
+    #placeholder svg { opacity: 0.5; }
+    #placeholder p { font-size: 0.85rem; text-align: center; line-height: 1.4; }
+
+    /* ── Botones ── */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn {
+      padding: 13px 10px;
+      border: none; border-radius: 14px;
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-camara  { background: #6c3483; color: #fff; }
+    .btn-galeria { background: rgba(255,255,255,0.1); color: #f0f0f0;
+                   border: 1px solid rgba(255,255,255,0.15); }
+    .btn-analizar {
+      grid-column: 1 / -1;
+      padding: 15px;
+      background: linear-gradient(135deg, #8e44ad, #6c3483);
+      color: #fff; border-radius: 14px;
+      font-size: 1rem; font-weight: 700;
+      border: none; cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-analizar:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-analizar:not(:disabled):active { transform: scale(0.97); }
+
+    /* ── Estado / spinner ── */
+    #estado {
+      text-align: center; font-size: 0.83rem;
+      color: #a0a0b0; min-height: 20px;
+    }
+
+    /* ── Tarjeta de resultado ── */
+    #resultado {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 18px;
+      display: none;
+    }
+    #resultado h2 { font-size: 0.78rem; text-transform: uppercase;
+                    letter-spacing: 1px; color: #a0a0b0; margin-bottom: 12px; }
+
+    /* Diagnóstico principal */
+    #diag-principal {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 16px;
+      padding: 14px; border-radius: 14px;
+      background: rgba(108, 52, 131, 0.25);
+    }
+    #diag-icono { font-size: 2.2rem; }
+    #diag-nombre { font-size: 1.15rem; font-weight: 700; }
+    #diag-confianza { font-size: 0.82rem; color: #c39bd3; margin-top: 2px; }
+
+    /* Barras de probabilidad */
+    .barra-row { margin-bottom: 9px; }
+    .barra-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; color: #ccc; margin-bottom: 4px;
+    }
+    .barra-bg {
+      height: 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .barra-fill {
+      height: 100%; border-radius: 4px;
+      transition: width 0.6s cubic-bezier(.25,.8,.25,1);
+    }
+
+    /* Descripción de la enfermedad */
+    #descripcion {
+      margin-top: 14px; padding: 12px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px; border-left: 3px solid #8e44ad;
+      font-size: 0.82rem; line-height: 1.55; color: #c0c0d0;
+    }
+
+    /* Input oculto */
+    #file-input { display: none; }
+
+    /* ── Badge offline ── */
+    #badge-offline {
+      position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+      background: #27ae60; color: #fff;
+      padding: 6px 16px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600;
+      opacity: 0; transition: opacity 0.4s;
+      pointer-events: none;
+    }
+    #badge-offline.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🍇 Doctor <span>Vid</span> AI</h1>
+  <p>Diagnóstico fitosanitario · 100% en dispositivo · sin internet</p>
+</header>
+
+<main>
+  <!-- Zona de imagen -->
+  <div id="zona-imagen" onclick="document.getElementById('file-input').click()">
+    <div id="placeholder">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <p>Toca para hacer una foto<br/>o elegir de la galería</p>
+    </div>
+    <img id="preview" alt="Vista previa" />
+  </div>
+
+  <!-- Botones -->
+  <div class="btn-row">
+    <button class="btn btn-camara" onclick="abrirCamara()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Cámara
+    </button>
+    <button class="btn btn-galeria" onclick="abrirGaleria()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      Galería
+    </button>
+    <button class="btn-analizar" id="btn-analizar" disabled onclick="analizar()">
+      ⚡ Analizar hoja
+    </button>
+  </div>
+
+  <p id="estado">Cargando modelo de IA…</p>
+
+  <!-- Resultado -->
+  <div id="resultado">
+    <h2>Diagnóstico</h2>
+    <div id="diag-principal">
+      <div id="diag-icono">🔬</div>
+      <div>
+        <div id="diag-nombre">—</div>
+        <div id="diag-confianza">—</div>
+      </div>
+    </div>
+    <div id="barras"></div>
+    <div id="descripcion"></div>
+  </div>
+</main>
+
+<div id="badge-offline">✓ Funciona sin conexión</div>
+<input type="file" id="file-input" accept="image/*" onchange="cargarImagen(event)" />
+
+<script src="app.js"></script>
+</body>
+</html>
