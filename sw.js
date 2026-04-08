@@ -1,4 +1,4 @@
-const CACHE = 'doctor-vid-v1';
+const CACHE = 'doctor-vid-v2';
 const ASSETS = [
   './',
   './index.html',
